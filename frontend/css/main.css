@@ -18,7 +18,7 @@ body {
     font-size: 12px;
 }
 
-#form, #full_view {
+#form, #full-view {
     margin-left: 310px; /* Same as the width of the sidebar */
     padding: 20px 10px;
 }

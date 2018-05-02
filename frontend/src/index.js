@@ -1,112 +1,59 @@
 document.addEventListener("DOMContentLoaded", function(event) {
 
+  const previewOl = document.getElementById('preview-ol')
+  const fullViewDiv = document.getElementById('full-view')
+  const newNoteForm = document.getElementById('form')
+  const inputTitle = document.getElementById('title')
+  const inputBody = document.getElementById('body')
 
-  Note.prototype.template = function() {
-    let template = document.createElement("ul")
-    template.innerHTML = `<li class="preview">${this.body.slice(0, 40)}...</li>`
-    return template;
+  const foundNote = (prefix, eventTargetId) => {
+    return noteStore.find((note) => eventTargetId === `${prefix}-${note.id}`)
   }
 
-  let preview = document.getElementById('preview')
-
-  function showNotes(note) {
-    let noteP = note.template()
-    preview.append(noteP)
-    noteP.addEventListener('click', function(){showFullView(note)})
-  }
-
-  Note.prototype.full_template = function() {
-    return `<h2>Title: "${this.title}"</h2><p><strong>Body:</strong> ${this.body}</p>`
-  }
-
-  let fullView = document.getElementById('full_view')
-  function showFullView(note) {
-    fullView.innerHTML = note.full_template()
-    let editButton = document.createElement("button");
-    editButton.id = `edit-button-${note.id}`
-    editButton.innerText = "Rewrite!"
-    fullView.append(editButton)
-    let deleteButton = document.createElement("button");
-    deleteButton.id = `delete-button-${note.id}`
-    deleteButton.innerText = "Disappear!"
-    fullView.append(deleteButton)
-
-    fullView.addEventListener('click', function(event){
-      if(event.target.id === `delete-button-${note.id}` ){
-        deleteNote(note)
-      } else if (event.target.id === `edit-button-${note.id}`) {
-        editNoteForm(note, fullView)
-      }
-    })
-  }
-
-  let form = document.getElementById("form")
-  let inputTitle = document.getElementById("title")
-  let inputBody = document.getElementById("body")
-  form.addEventListener('submit', (event) => {
-    event.preventDefault();
-    let inputData = { title: inputTitle.value, body: inputBody.value }
-    createNotes(inputData);
+  newNoteForm.addEventListener('submit', function(event){
+    event.preventDefault()
+    const newId = noteStore[noteStore.length - 1].id + 1
+    const newNote = new Note({id: newId, title: inputTitle.value, body: inputBody.value, user: userStore[0] })
+    newNote.createNote()
+    newNote.renderNote()
+    fullViewDiv.innerHTML = newNote.renderFullView()
+    
   })
 
-  function createNotes(inputData) {
-    fetch("http://localhost:3000/api/v1/notes", {
-      method: 'POST',
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(inputData)
-  }).then(response => response.json())
-  .then(data => showNotes(new Note(data)))
-  }
+  previewOl.addEventListener('click', function(event){
+    fullViewDiv.innerHTML = foundNote('note', event.target.id).renderFullView()
+  })
 
-  function editNoteForm(note, div){
-    div.innerHTML = `
-    <h2>Title:</h2>
-    <input type="text" id="edit-title" value="${note.title}">
-    <p>Body:</p>
-    <input type="text" id="edit-body" value="${note.body}">
-    `
-    let editButton = document.createElement("button");
-    editButton.id = `submit-edit-button-${note.id}`
-    editButton.innerText = "Submit!"
+  fullViewDiv.addEventListener('click', function(event){
+    const eventId = event.target.id
+    let noteInstance;
 
-    div.appendChild(editButton)
-
-    editButton.addEventListener('click', function(){
-      note.title = document.getElementById('edit-title').value
-      note.body = document.getElementById('edit-body').value
-      editNote(note)
-    })
-  }
-
-  function editNote(inputData) {
-    fetch(`http://localhost:3000/api/v1/notes/${inputData.id}`,{
-      method: 'PATCH',
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(inputData)
-  }).then(response => response.json())
-  .then(data => location.reload())
-  }
-
-  function deleteNote(inputData){
-    console.log(inputData)
-    return fetch(`http://localhost:3000/api/v1/notes/${inputData.id}`,{
-      method: 'DELETE',
-      headers: {
-        "Content-Type": "application/json"
-      }
-    })
-  .then(response => location.reload())
-  }
+    if(eventId.includes('delete-button')){
+      noteInstance = foundNote('delete-button', eventId)
+      noteInstance.removeNote()
+      noteInstance.deleteNote()
+      fullViewDiv.innerHTML = ''
+    }
+    else if(eventId.includes('edit-button')){
+      noteInstance = foundNote('edit-button', eventId)
+      fullViewDiv.innerHTML = noteInstance.renderEditForm()
+    }
+    else if(eventId.includes('submit-button')){
+      noteInstance = foundNote('submit-button', eventId)
+      noteInstance.title = document.getElementById('edit-title').value
+      noteInstance.body = document.getElementById('edit-body').value
+      noteInstance.editNote()
+      noteInstance.updateNote()
+      fullViewDiv.innerHTML = noteInstance.renderFullView()
+    }
+  })
 
   fetch("http://localhost:3000/api/v1/notes")
   .then(response => response.json())
   .then(data => {
     for (let i of data) {
-      showNotes(new Note(i));
+      const newNote = new Note(i)
+      newNote.renderNote();
     }
   })
 
