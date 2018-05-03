@@ -59,10 +59,7 @@
 
     deleteNote(){
       fetch(`http://localhost:3000/api/v1/notes/${this.id}`, {
-        method: 'DELETE',
-        headers: {
-          "Content-Type": "application/json"
-        }
+        method: 'DELETE'
       })
     }
 
